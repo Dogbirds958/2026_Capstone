@@ -217,6 +217,6 @@ func loadConfig() Config {
 		fmt.Println("config error: cpu_max is empty")
 		os.Exit(1)
 	}
-
+	//prototype
 	return cfg
 }
