@@ -6,7 +6,6 @@
 
 기존의 일반 실행 환경 대신 Linux Namespace, RootFS, Cgroup 기반의 격리 환경을 제공하여 의료 AI 모델이 안전하게 실행될 수 있도록 설계하였습니다.
 
----
 
 ## 프로젝트 목표
 
@@ -15,7 +14,6 @@
 - AI 추론 환경과 컨테이너 기술의 결합
 - 의료기관 내부망(Intranet) 환경 적용 가능성 검증
 
----
 
 ## 시스템 구조
 
@@ -41,8 +39,6 @@ Result Validation
 User Output
 ```
 
----
-
 ## 주요 기능
 
 ### 구현 완료
@@ -54,7 +50,6 @@ User Output
 - [x] BusyBox Shell 실행
 
 ### 개발 예정
-
 - [ ] PHI 마스킹 모듈
 - [ ] AI 추론 모듈 통합
 - [ ] Cgroup 기반 자원 제한
