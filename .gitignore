@@ -27,6 +27,7 @@ config.json
 # root filesystem (용량 큼)
 # =========================
 rootfs/
+busybox-rootfs/
 
 # =========================
 # Editor / OS files

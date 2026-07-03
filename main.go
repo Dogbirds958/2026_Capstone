@@ -5,18 +5,19 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"syscall"
 	"path/filepath"
+	"syscall"
 )
 
 type Config struct {
-	Hostname  string   `json:"hostname"`	//container hostname
-	Rootfs    string   `json:"rootfs"`		//root filesystem path
-	MemoryMax string   `json:"memory_max"`	//memory max
-	PidsMax   string   `json:"pids_max"`	//pid max
-	Command   []string `json:"command"`		//command
-	ContainerID string `json:"container_id"`	//dir name	
-	CpuMax string `json:"cpu_max"`			//cpu max
+	Hostname    string   `json:"hostname"`     //container hostname
+	Rootfs      string   `json:"rootfs"`       //root filesystem path
+	SetupScript string   `json:"setup_script"` //rootfs setup script
+	MemoryMax   string   `json:"memory_max"`   //memory max
+	PidsMax     string   `json:"pids_max"`     //pid max
+	Command     []string `json:"command"`      //command
+	ContainerID string   `json:"container_id"` //dir name
+	CpuMax      string   `json:"cpu_max"`      //cpu max
 }
 
 func main() {
@@ -26,18 +27,24 @@ func main() {
 	if len(os.Args) > 1 && os.Args[1] == "child" {
 		child()
 		return
-	}		
+	}
 
-	run()	//parent process 
+	run() //parent process
 }
 
-//parnet process
+// parnet process
 func run() {
 	fmt.Println("parrent process")
 
 	//load config
 	cfg := loadConfig()
 
+	if err := runSetupScript(cfg); err != nil {
+		fmt.Println("setup script fail:", err)
+		os.Exit(1)
+	}
+
+	// 자식 프로세스 실행 객체 생성
 	cmd := exec.Command("/proc/self/exe", "child")
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
@@ -45,13 +52,13 @@ func run() {
 
 	//	use namespace
 	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Cloneflags: syscall.CLONE_NEWUTS |	//hostname
-			syscall.CLONE_NEWPID |			//pid namespace
-			syscall.CLONE_NEWNS |			//mount namespace
-			syscall.CLONE_NEWNET,			// network namespace
+		Cloneflags: syscall.CLONE_NEWUTS | //hostname
+			syscall.CLONE_NEWPID | //pid namespace
+			syscall.CLONE_NEWNS | //mount namespace
+			syscall.CLONE_NEWNET, // network namespace
 	}
 
-	//child process exec
+	// 자식 프로세스 생성
 	if err := cmd.Start(); err != nil {
 		fmt.Println("start fail:", err)
 		os.Exit(1)
@@ -61,20 +68,21 @@ func run() {
 	// cgroup cleanup
 	defer os.RemoveAll(filepath.Join("/sys/fs/cgroup", cfg.ContainerID))
 
+	// cgroup 설정
 	if err := setCgroup(cmd.Process.Pid, cfg); err != nil {
 		fmt.Println("cgroup fail:", err)
 		_ = cmd.Process.Kill()
 		os.Exit(1)
 	}
 
-	// waiting child process termination
+	// 부모가 자식 프로세스 기다림
 	if err := cmd.Wait(); err != nil {
 		fmt.Println("wait fail:", err)
 		os.Exit(1)
 	}
 }
 
-//child process
+// child process
 func child() {
 	fmt.Println("child process")
 	cfg := loadConfig()
@@ -86,17 +94,9 @@ func child() {
 	}
 
 	// rootfs path
-	exePath, err := os.Executable()
-	if err != nil {
-		fmt.Println("executable path fail:", err)
-		os.Exit(1)
-	}
-
-	exeDir := filepath.Dir(exePath)
-
 	rootfs := cfg.Rootfs
 	if !filepath.IsAbs(rootfs) {
-		rootfs = filepath.Join(exeDir, rootfs)
+		rootfs = filepath.Join(configDir(), rootfs)
 	}
 
 	if _, err := os.Stat(rootfs); err != nil {
@@ -122,13 +122,13 @@ func child() {
 		os.Exit(1)
 	}
 
-	// exit 
+	// exit
 	// if exec command is empty
 	if len(cfg.Command) == 0 {
 		fmt.Println("need command set")
 		os.Exit(1)
 	}
-	
+
 	// container command exec
 	if err := syscall.Exec(cfg.Command[0], cfg.Command, os.Environ()); err != nil {
 		fmt.Println("shell exec fail:", err)
@@ -139,7 +139,6 @@ func child() {
 func setCgroup(pid int, cfg Config) error {
 	//dir path
 	cgroupPath := filepath.Join("/sys/fs/cgroup", cfg.ContainerID)
-
 
 	// cgroup dir create
 	if err := os.MkdirAll(cgroupPath, 0755); err != nil {
@@ -168,17 +167,33 @@ func setCgroup(pid int, cfg Config) error {
 	return nil
 }
 
+func runSetupScript(cfg Config) error {
+	if cfg.SetupScript == "" {
+		return nil
+	}
+
+	scriptPath := cfg.SetupScript
+	if !filepath.IsAbs(scriptPath) {
+		scriptPath = filepath.Join(configDir(), scriptPath)
+	}
+
+	rootfs := cfg.Rootfs
+	if !filepath.IsAbs(rootfs) {
+		rootfs = filepath.Join(configDir(), rootfs)
+	}
+
+	cmd := exec.Command("/bin/sh", scriptPath, rootfs)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	return cmd.Run()
+}
+
 func loadConfig() Config {
 
 	//find config.json
-	exePath, err := os.Executable()
-	if err != nil {
-		fmt.Println("executable path fail:", err)
-		os.Exit(1)
-	}
-
-	exeDir := filepath.Dir(exePath)
-	configPath := filepath.Join(exeDir, "config.json")
+	configPath := filepath.Join(configDir(), "config.json")
 
 	data, err := os.ReadFile(configPath)
 	if err != nil {
@@ -219,4 +234,24 @@ func loadConfig() Config {
 	}
 	//prototype
 	return cfg
+}
+
+func configDir() string {
+	if _, err := os.Stat("config.json"); err == nil {
+		wd, err := os.Getwd()
+		if err != nil {
+			fmt.Println("working dir fail:", err)
+			os.Exit(1)
+		}
+
+		return wd
+	}
+
+	exePath, err := os.Executable()
+	if err != nil {
+		fmt.Println("executable path fail:", err)
+		os.Exit(1)
+	}
+
+	return filepath.Dir(exePath)
 }
