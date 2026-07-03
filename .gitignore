@@ -12,6 +12,7 @@
 # binary (네가 만든 실행파일)
 mycontainer
 container-runtime
+mini-container
 
 # =========================
 # Go modules
@@ -38,6 +39,8 @@ busybox-rootfs/
 .vscode/
 .idea/
 .DS_Store
+.codex
+
 
 # =========================
 # Logs / temp
