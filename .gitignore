@@ -14,10 +14,6 @@ mycontainer
 container-runtime
 mini-container
 
-# =========================
-# Go modules
-# =========================
-go.sum
 
 # =========================
 # config (개인 실행 설정)
@@ -27,7 +23,6 @@ config.json
 # =========================
 # root filesystem (용량 큼)
 # =========================
-rootfs/
 busybox-rootfs/
 
 # =========================
@@ -39,7 +34,11 @@ busybox-rootfs/
 .vscode/
 .idea/
 .DS_Store
-.codex
+.codex/
+.venv-onnx-export/
+.venv-build-tools/
+third_party/onnxruntime/
+build/
 
 
 # =========================

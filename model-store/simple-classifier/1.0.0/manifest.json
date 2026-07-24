@@ -1,0 +1,19 @@
+{
+  "name": "simple-classifier",
+  "version": "1.0.0",
+  "format": "onnx",
+  "model_file": "model.onnx",
+  "input_file": "input.bin",
+  "input_name": "input",
+  "input_type": "float32",
+  "input_shape": [
+    1,
+    128
+  ],
+  "output_name": "logits",
+  "output_classes": 3,
+  "sha256": {
+    "model.onnx": "306bea2f4628a3adc5a2129016ecf2b76ed413725794271ded63b533d815b973",
+    "input.bin": "06e0c9ea83131655e29cb8f3814bab2afcb1326db373bafb6fb5ad0b0969360a"
+  }
+}

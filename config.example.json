@@ -1,0 +1,44 @@
+{
+  "hostname": "medical-ai-container",
+  "rootfs": "./busybox-rootfs",
+  "command": [
+    "/bin/inference-runner",
+    "--model",
+    "/models/current/model.onnx",
+    "--input",
+    "/models/current/input.bin"
+  ],
+  "model": {
+    "host_path": "./model-store/simple-classifier/1.0.0",
+    "container_path": "/models/current",
+    "read_only": true
+  },
+  "setup_script": "setup_busybox_rootfs.sh",
+  "app_mount": "./rootfs/app",
+  "bind_mounts": [
+    {
+      "source": "./.venv-onnx-export",
+      "target": "/venv"
+    },
+    {
+      "source": "/usr",
+      "target": "/usr"
+    },
+    {
+      "source": "/lib",
+      "target": "/lib"
+    },
+    {
+      "source": "/lib64",
+      "target": "/lib64"
+    },
+    {
+      "source": "/dev",
+      "target": "/dev"
+    }
+  ],
+  "memory_max": "1073741824",
+  "pids_max": "64",
+  "cpu_max": "50000 100000",
+  "container_id": "koelectra-onnx-test"
+}
